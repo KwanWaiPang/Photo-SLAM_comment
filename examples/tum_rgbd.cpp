@@ -40,12 +40,13 @@ void saveTrackingTime(std::vector<float> &vTimesTrack, const std::string &strSav
 void saveGpuPeakMemoryUsage(std::filesystem::path pathSave);
 
 //运行tum rgbd的主函数
-int main(int argc, char **argv)
+int main(int argc, char **argv) //接受两个参数，一个是整数 argc，表示命令行参数的数量，另一个是字符指针数组 argv，表示实际的命令行参数。
 {
+    // 检查参数数量是否正确，若不为7也不为8，则输出提示信息
     if (argc != 7 && argc != 8)
     {
         std::cerr << std::endl
-                  << "Usage: " << argv[0]
+                  << "Usage: " << argv[0]  //argv[0]表示程序的名称
                   << " path_to_vocabulary"                   /*1*/
                   << " path_to_ORB_SLAM3_settings"           /*2*/
                   << " path_to_gaussian_mapping_settings"    /*3*/
@@ -54,13 +55,16 @@ int main(int argc, char **argv)
                   << " path_to_trajectory_output_directory/" /*6*/
                   << " (optional)no_viewer"                  /*7*/
                   << std::endl;
-        return 1;
+        return 1;//如果命令行参数数量不正确，程序返回值设为 1，表示程序执行出现错误。
     }
+
     bool use_viewer = true;
+    //若命令行参数数量为8，则判断第8个参数是否为 no_viewer，若是则不使用 viewer。
     if (argc == 8)
         use_viewer = (std::string(argv[7]) == "no_viewer" ? false : true);
 
-    std::string output_directory = std::string(argv[6]);
+    //创建输出目录
+    std::string output_directory = std::string(argv[6]);//argv[6]表示输出目录
     if (output_directory.back() != '/')
         output_directory += "/";
     std::filesystem::path output_dir(output_directory);

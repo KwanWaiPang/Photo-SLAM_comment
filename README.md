@@ -13,6 +13,7 @@
   | <a href="https://huajianup.github.io/research/Photo-SLAM/">Project Page</a> 
   | <a href="https://github.com/HuajianUP/Photo-SLAM">Original Github Page</a>
   | <a href="https://github.com/KwanWaiPang/3dgs_cuda_opencv">3DGS的C++版本</a>
+  | <a href="https://github.com/KwanWaiPang/libtorch_modified">libtorch修正版本</a>
   </h3>
   <div align="center"></div>
 
