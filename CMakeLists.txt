@@ -213,6 +213,8 @@ target_link_libraries(tum_mono
     ${ORB_SLAM3_SOURCE_DIR}/lib/libORB_SLAM3.so)
 
 # TUM RGBD
+# 以这个为例子，运行tum的rgbd数据，同时链接了下面几个库：
+# 1、tum_rgbd、gaussian_viewer（这是可视化3dgs的）、gaussian_mapper（这应该是运行3dgs mapping的）、libORB_SLAM3.so（这是运行orbslam3的）
 add_executable(tum_rgbd examples/tum_rgbd.cpp)
 target_link_libraries(tum_rgbd
     gaussian_viewer    

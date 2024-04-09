@@ -39,6 +39,7 @@ void LoadImages(const std::string &strAssociationFilename, std::vector<std::stri
 void saveTrackingTime(std::vector<float> &vTimesTrack, const std::string &strSavePath);
 void saveGpuPeakMemoryUsage(std::filesystem::path pathSave);
 
+//运行tum rgbd的主函数
 int main(int argc, char **argv)
 {
     if (argc != 7 && argc != 8)
