@@ -18,11 +18,12 @@
 
 #include "include/gaussian_mapper.h"
 
+//GaussianMapper的构造函数
 GaussianMapper::GaussianMapper(
     std::shared_ptr<ORB_SLAM3::System> pSLAM,
     std::filesystem::path gaussian_config_file_path,
     std::filesystem::path result_dir,
-    int seed,
+    int seed,//随机种子为0
     torch::DeviceType device_type)
     : pSLAM_(pSLAM),
       initial_mapped_(false),
@@ -37,7 +38,7 @@ GaussianMapper::GaussianMapper(
       large_trans_th_(1e-2f),
       training_report_interval_(0)
 {
-    // Random seed
+    // Random seed（随机数生成器的种子设置）
     std::srand(seed);
     torch::manual_seed(seed);
 
@@ -368,6 +369,7 @@ void GaussianMapper::readConfigFromFile(std::filesystem::path cfg_path)
         settings_file["GaussianViewer.image_scale_main"].operator float();
 }
 
+// tum_rgbd中开启的线程，运行3D高斯的过程
 void GaussianMapper::run()
 {
     // First loop: Initial gaussian mapping

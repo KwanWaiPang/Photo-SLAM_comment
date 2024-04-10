@@ -73,10 +73,11 @@ int main(int argc, char **argv) //接受两个参数，一个是整数 argc，�
     std::vector<std::string> vstrImageFilenamesRGB;
     std::vector<std::string> vstrImageFilenamesD;
     std::vector<double> vTimestamps;
+    // 通过.txt文件读取图像和深度图像的路径以及时间戳
     std::string strAssociationFilename = std::string(argv[5]);
     LoadImages(strAssociationFilename, vstrImageFilenamesRGB, vstrImageFilenamesD, vTimestamps);
 
-    // Check consistency in the number of images and depthmaps
+    // Check consistency in the number of images and depthmaps（确保图像不为空且深度图与图像的数目是一致的）
     int nImages = vstrImageFilenamesRGB.size();
     if (vstrImageFilenamesRGB.empty())
     {
@@ -90,6 +91,7 @@ int main(int argc, char **argv) //接受两个参数，一个是整数 argc，�
     }
 
     // Device
+    // 检查GPU是否可用，若可用则使用GPU，否则使用CPU
     torch::DeviceType device_type;
     if (torch::cuda::is_available())
     {
@@ -103,19 +105,21 @@ int main(int argc, char **argv) //接受两个参数，一个是整数 argc，�
     }
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
-    std::shared_ptr<ORB_SLAM3::System> pSLAM =
+    std::shared_ptr<ORB_SLAM3::System> pSLAM = //用C++中的智能指针 std::shared_ptr 创建了一个指向 ORB_SLAM3::System 类型对象的共享指针 pSLAM
         std::make_shared<ORB_SLAM3::System>(
-            argv[1], argv[2], ORB_SLAM3::System::RGBD);
-    float imageScale = pSLAM->GetImageScale();
+            argv[1], argv[2], ORB_SLAM3::System::RGBD);//输入参数为词典文件路径、设置文件路径和传感器类型（RGBD=2也就是传感器的类型）
+    float imageScale = pSLAM->GetImageScale();//获取图像的缩放比例（也可能是尺度信息，TODO：此处需要深入查看orbslam3部分的源码）
 
-    // Create GaussianMapper
-    std::filesystem::path gaussian_cfg_path(argv[3]);
+    // Create GaussianMapper（创建3DGS）
+    std::filesystem::path gaussian_cfg_path(argv[3]);//argv[3]表示3DGS的设置文件路径
     std::shared_ptr<GaussianMapper> pGausMapper =
         std::make_shared<GaussianMapper>(
-            pSLAM, gaussian_cfg_path, output_dir, 0, device_type);
-    std::thread training_thd(&GaussianMapper::run, pGausMapper.get());
+            pSLAM, gaussian_cfg_path, output_dir, 0, device_type);//传入的参数为SLAM系统、3DGS的设置文件路径、输出目录、0和设备类型
+    // 创建了一个新的线程 training_thd，并将 GaussianMapper::run 函数作为线程执行的函数，同时传入了 pGausMapper.get() 作为参数。
+    // pGausMapper.get() 用于获取 pGausMapper 指针指向的对象的原始指针，因为 std::thread 构造函数需要原始指针作为参数。这样做的目的可能是在一个单独的线程中执行 GaussianMapper::run 函数，以便进行地图生成的操作。
+    std::thread training_thd(&GaussianMapper::run, pGausMapper.get());//run函数才是运行3DGS的主函数
 
-    // Create Gaussian Viewer
+    // Create Gaussian Viewer（用于高斯的可视化）
     std::thread viewer_thd;
     std::shared_ptr<ImGuiViewer> pViewer;
     if (use_viewer)
