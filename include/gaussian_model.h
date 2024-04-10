@@ -36,6 +36,7 @@
 #include "tensor_utils.h"
 #include "gaussian_parameters.h"
 
+// 用于将一组张量存储为向量（数据格式为std::vector<torch::Tensor>）
 #define GAUSSIAN_MODEL_TENSORS_TO_VEC                        \
     this->Tensor_vec_xyz_ = {this->xyz_};                    \
     this->Tensor_vec_feature_dc_ = {this->features_dc_};     \
@@ -44,6 +45,8 @@
     this->Tensor_vec_scaling_ = {this->scaling_};            \
     this->Tensor_vec_rotation_ = {this->rotation_};
 
+// 宏定义，用于初始化多个张量(tensor)并将它们都放置到指定的设备(device)上。
+// 该宏接受一个参数 device_type，用于指定设备类型。
 #define GAUSSIAN_MODEL_INIT_TENSORS(device_type)                                             \
     this->xyz_ = torch::empty(0, torch::TensorOptions().device(device_type));                \
     this->features_dc_ = torch::empty(0, torch::TensorOptions().device(device_type));        \
@@ -54,7 +57,7 @@
     this->max_radii2D_ = torch::empty(0, torch::TensorOptions().device(device_type));        \
     this->xyz_gradient_accum_ = torch::empty(0, torch::TensorOptions().device(device_type)); \
     this->denom_ = torch::empty(0, torch::TensorOptions().device(device_type));              \
-    GAUSSIAN_MODEL_TENSORS_TO_VEC
+    GAUSSIAN_MODEL_TENSORS_TO_VEC  //定义的另外一个宏
 
 class GaussianModel
 {
@@ -157,6 +160,7 @@ public:
     int active_sh_degree_;
     int max_sh_degree_;
 
+    // 用于存储一些张量(tensor)的成员变量
     torch::Tensor xyz_;
     torch::Tensor features_dc_;
     torch::Tensor features_rest_;
@@ -168,6 +172,7 @@ public:
     torch::Tensor denom_;
     torch::Tensor exist_since_iter_;
 
+    // 用于存储一些张量(tensor)的向量
     std::vector<torch::Tensor> Tensor_vec_xyz_,
                                Tensor_vec_feature_dc_,
                                Tensor_vec_feature_rest_,

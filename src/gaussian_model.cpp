@@ -32,6 +32,7 @@ GaussianModel::GaussianModel(const int sh_degree)
     GAUSSIAN_MODEL_INIT_TENSORS(this->device_type_)
 }
 
+//跟上面是类似的，只是这个是根据参数初始化
 GaussianModel::GaussianModel(const GaussianModelParams &model_params)
     : active_sh_degree_(0), spatial_lr_scale_(0.0),
       lr_delay_steps_(0), lr_delay_mult_(1.0), max_steps_(1000000)
@@ -44,6 +45,8 @@ GaussianModel::GaussianModel(const GaussianModelParams &model_params)
     else
         this->device_type_ = torch::kCPU;
 
+    //初始化3D高斯对应的张量，包括xyz_、features_dc_、features_rest_、scaling_、rotation_、opacity_、max_radii2D_、xyz_gradient_accum_、denom_
+    // 初始化的时候都是初始化为空的
     GAUSSIAN_MODEL_INIT_TENSORS(this->device_type_)
 }
 

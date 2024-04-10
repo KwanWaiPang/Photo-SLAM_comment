@@ -20,10 +20,11 @@
 
 GaussianScene::GaussianScene(
     GaussianModelParams& args,
-    int load_iteration,
-    bool shuffle,
-    std::vector<float> resolution_scales)
+    int load_iteration,//默认为0
+    bool shuffle,//默认为true
+    std::vector<float> resolution_scales)//默认为{1.0f}
 {
+    // load_iteration默认为0，所以相当于不执行，只是初始化声明了场景
     if (load_iteration)
     {
         this->loaded_iter_ = load_iteration;
