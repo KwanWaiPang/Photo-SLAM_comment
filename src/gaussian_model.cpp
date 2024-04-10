@@ -415,18 +415,23 @@ void GaussianModel::applyScaledTransformation(
     scaledTransformationPostfix(this->xyz_, this->scaling_);
 }
 
+// 这个函数主要用于对类中的成员变量 xyz_ 和 scaling_ 进行更新，并将更新后的张量保存到对应的优化器参数组中。
 void GaussianModel::scaledTransformationPostfix(
     torch::Tensor& new_xyz,
     torch::Tensor& new_scaling)
 {
     // param_groups[0] = xyz_
+    // 将传入的 new_xyz 张量替换为优化器中参数组的第一个参数，并将结果保存在 optimizable_xyz 中。
     torch::Tensor optimizable_xyz = this->replaceTensorToOptimizer(new_xyz, 0);
     // param_groups[4] = scaling_
+    // 将传入的 new_scaling 张量替换为优化器中参数组的第五个参数，并将结果保存在 optimizable_scaling 中。
     torch::Tensor optimizable_scaling = this->replaceTensorToOptimizer(new_scaling, 4);
 
+    // 将替换后的优化张量分配给类中的成员变量 xyz_ 和 scaling_。
     this->xyz_ = optimizable_xyz;
     this->scaling_ = optimizable_scaling;
 
+    // 将这些张量添加到类中的成员向量 Tensor_vec_xyz_ 和 Tensor_vec_scaling_ 中。
     this->Tensor_vec_xyz_ = {this->xyz_};
     this->Tensor_vec_scaling_ = {this->scaling_};
 }
@@ -483,6 +488,8 @@ void GaussianModel::scaledTransformVisiblePointsOfKeyframe(
     // param_groups[4] = scaling_
     // param_groups[5] = rotation_
     // ==================================
+
+    // 标记完可见点后，就要进行替代处理
     torch::Tensor optimizable_xyz = this->replaceTensorToOptimizer(points, 0);
     // torch::Tensor optimizable_scaling = this->replaceTensorToOptimizer(scales, 4);
     torch::Tensor optimizable_rots = this->replaceTensorToOptimizer(rots, 5);
@@ -587,21 +594,44 @@ void GaussianModel::resetOpacity()
     this->Tensor_vec_opacity_ = {this->opacity_};
 }
 
+// 替换优化器中特定索引的参数，并更新其对应的状态。
 torch::Tensor GaussianModel::replaceTensorToOptimizer(torch::Tensor& tensor, int tensor_idx)
 {
+    // 从优化器中获取特定索引 tensor_idx 的参数组中的第一个参数，并将其存储在 param 中。
     auto& param = this->optimizer_->param_groups()[tensor_idx].params()[0];
+
+    // 获取优化器的状态字典，并将其存储在 state 中。
     auto& state = optimizer_->state();
+
+    // 参数张量的底层实现中获取键值，并将其转换为字符串，用于在状态字典中唯一标识这个参数。
     auto key = c10::guts::to_string(param.unsafeGetTensorImpl());
+
+    // 从状态字典中获取与参数对应的状态对象，这里假设状态对象是 AdamParamState 类型的，并将其存储在 stored_state 中。
     auto& stored_state = static_cast<torch::optim::AdamParamState&>(*state[key]);
+
+    // 创建一个新的参数状态对象。
     auto new_state = std::make_unique<torch::optim::AdamParamState>();
+
+    // 将新状态对象的步数设置为存储状态对象的步数。
     new_state->step(stored_state.step());
+
+    // 将新状态对象的指数加权平均值初始化为与给定张量相同大小的零张量。
     new_state->exp_avg(torch::zeros_like(tensor));
+    
+    // 将新状态对象的平方指数加权平均值初始化为与给定张量相同大小的零张量。
     new_state->exp_avg_sq(torch::zeros_like(tensor));
     // new_state->max_exp_avg_sq(stored_state.max_exp_avg_sq().clone()); // needed only when options.amsgrad(true), which is false by default
 
+    // 从状态字典中移除之前与参数对应的状态对象。
     state.erase(key);
+
+    // 参数替换为新的张量 tensor，并确保新张量需要梯度。
     param = tensor.requires_grad_();
+
+    // 从新参数张量的底层实现中获取新键值，并将其转换为字符串。
     key = c10::guts::to_string(param.unsafeGetTensorImpl());
+
+    // 将新的参数状态对象与新参数关联，并添加到状态字典中。
     state[key] = std::move(new_state);
 
     auto optimizable_tensors = param;
