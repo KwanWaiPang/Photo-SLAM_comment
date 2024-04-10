@@ -25,7 +25,7 @@ GaussianMapper::GaussianMapper(
     std::filesystem::path result_dir,
     int seed,//随机种子为0
     torch::DeviceType device_type)
-    : pSLAM_(pSLAM),
+    : pSLAM_(pSLAM),//已经相当于获取orbslam的数据
       initial_mapped_(false),
       interrupt_training_(false),
       stopped_(false),
@@ -421,15 +421,23 @@ void GaussianMapper::run()
                     //将点及队医你个的颜色放入到scene_中
                     scene_->cachePoint3D(pMP->mnId, point3D);
                 }
+
+                //然后再遍历关键帧
                 for (const auto& pKF : vpKFs){
+                    //创建一个新的高斯关键帧（以关键帧的id以及当前的代数来创建）
                     std::shared_ptr<GaussianKeyframe> new_kf = std::make_shared<GaussianKeyframe>(pKF->mnId, getIteration());
+                    //下面两个是参数，定义了最近以及最远的深度
                     new_kf->zfar_ = z_far_;
                     new_kf->znear_ = z_near_;
-                    // Pose
-                    auto pose = pKF->GetPose();
+
+                    //获取位姿 Pose
+                    auto pose = pKF->GetPose();//获取关键帧对应的pose
+                    //设置位姿
                     new_kf->setPose(
                         pose.unit_quaternion().cast<double>(),
                         pose.translation().cast<double>());
+
+                    // 获取图像信息
                     cv::Mat imgRGB_undistorted, imgAux_undistorted;
                     try {
                         // Camera
@@ -460,6 +468,8 @@ void GaussianMapper::run()
                         throw std::runtime_error("[GaussianMapper::run]KeyFrame Camera not found!");
                     }
                     new_kf->computeTransformTensors();
+
+                    // 然后把关键帧添加到场景中
                     scene_->addKeyframe(new_kf, &kfid_shuffled_);
 
                     increaseKeyframeTimesOfUse(new_kf, newKeyframeTimesOfUse());
@@ -1802,6 +1812,7 @@ void GaussianMapper::writeKeyframeUsedTimes(std::filesystem::path result_dir, st
     out_stream.close();
 }
 
+// 返回当前的迭代次数
 int GaussianMapper::getIteration()
 {
     std::unique_lock<std::mutex> lock(mutex_status_);
