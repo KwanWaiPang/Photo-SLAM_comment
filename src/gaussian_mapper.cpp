@@ -525,7 +525,7 @@ void GaussianMapper::run()
                 //根据当前缓存的点云以及场景的边界来创建高斯模型（cached_point_cloud_为缓存的彩色点云）
                 gaussians_->createFromPcd(scene_->cached_point_cloud_, scene_->cameras_extent_);
                 std::unique_lock<std::mutex> lock(mutex_settings_);
-                gaussians_->trainingSetup(opt_params_);//进行最基本的训练设置
+                gaussians_->trainingSetup(opt_params_);//进行最基本的训练设置（用的是vector）
             }
 
             // Invoke training once（训练1代）

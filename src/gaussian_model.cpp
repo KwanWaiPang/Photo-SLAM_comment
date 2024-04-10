@@ -117,20 +117,30 @@ void GaussianModel::setShDegree(const int sh)
 }
 
 void GaussianModel::createFromPcd(
-    std::map<point3D_id_t, Point3D> pcd,
-    const float spatial_lr_scale)
+    std::map<point3D_id_t, Point3D> pcd,//当前缓存或者说获得的彩色点云
+    const float spatial_lr_scale) //场景边界？
 {
     this->spatial_lr_scale_ = spatial_lr_scale;
+
+    //获取缓存的点云的数量
     int num_points = static_cast<int>(pcd.size());
+    //要融合的点云
     torch::Tensor fused_point_cloud = torch::zeros(
         {num_points, 3},
         torch::TensorOptions().dtype(torch::kFloat).device(device_type_));
+    // 要融合的点云的颜色（创建一个形状为 (num_points, 3) 的张量 color，用于存储点云的颜色信息，数据类型为 float，并根据设备类型选择在 CPU 或 GPU 上创建。）
     torch::Tensor color = torch::zeros(
         {num_points, 3},
         torch::TensorOptions().dtype(torch::kFloat).device(device_type_));
+    // 获取彩色点云数据的迭代器。
     auto pcd_it = pcd.begin();
+
+    // 遍历彩色点云数据中的每个点。
     for (int point_idx = 0; point_idx < num_points; ++point_idx) {
-        auto& point = (*pcd_it).second;
+        auto& point = (*pcd_it).second;//获取当前迭代器指向的点云数据。
+
+        // 将点云数据中的点的坐标和颜色信息分别存储到 fused_point_cloud 和 color 张量中。
+        // ++pcd_it;：迭代器指向下一个点。
         fused_point_cloud.index({point_idx, 0}) = point.xyz_(0);
         fused_point_cloud.index({point_idx, 1}) = point.xyz_(1);
         fused_point_cloud.index({point_idx, 2}) = point.xyz_(2);
@@ -140,6 +150,7 @@ void GaussianModel::createFromPcd(
         ++pcd_it;
     }
 
+    //将其转换为sh格式
     torch::Tensor fused_color = sh_utils::RGB2SH(color);
     auto temp = this->max_sh_degree_ + 1;
     torch::Tensor features = torch::zeros(
@@ -190,6 +201,7 @@ void GaussianModel::createFromPcd(
     this->rotation_ = rots.requires_grad_();
     this->opacity_ = opacities.requires_grad_();
 
+    //将这些初始化好的张量放到一个vector中
     GAUSSIAN_MODEL_TENSORS_TO_VEC
 
     this->max_radii2D_ = torch::zeros({this->getXYZ().size(0)}, torch::TensorOptions().device(device_type_));
@@ -489,6 +501,7 @@ void GaussianModel::trainingSetup(const GaussianOptimizationParams& training_arg
     adam_options.set_lr(0.0);
     adam_options.eps() = 1e-15;
 
+    //注意用的是vector
     this->optimizer_.reset(new torch::optim::Adam(Tensor_vec_xyz_, adam_options));
     optimizer_->param_groups()[0].options().set_lr(training_args.position_lr_init_ * this->spatial_lr_scale_);
 
