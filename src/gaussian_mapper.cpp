@@ -389,7 +389,8 @@ void GaussianMapper::readConfigFromFile(std::filesystem::path cfg_path)
 // tum_rgbd中开启的线程，运行3D高斯的过程
 void GaussianMapper::run()
 {
-    // First loop: Initial gaussian mapping（首先通过一个循环来初始化高斯建图过程）
+    // First loop: Initial gaussian mapping（首先通过一个循环来初始化高斯建图过程，以及进行训练）
+    // 执行了初始化并进行一次训练后就会跳出这个循环
     while (!isStopped()) {
         // Check conditions for initial mapping
         if (hasMetInitialMappingConditions()) {//检查是否满足了初始化建图的条件（要求orbslam没关闭不为空且关键帧大于一定的数目）
@@ -472,12 +473,14 @@ void GaussianMapper::run()
                     // 然后把关键帧添加到场景中
                     scene_->addKeyframe(new_kf, &kfid_shuffled_);
 
+                    //递增关键帧对应的时间？？？
                     increaseKeyframeTimesOfUse(new_kf, newKeyframeTimesOfUse());
 
                     // Features
                     std::vector<float> pixels;
                     std::vector<float> pointsLocal;
                     pKF->GetKeypointInfo(pixels, pointsLocal);
+                    //  函数将存储关键点像素坐标和局部坐标的向量转移给新的关键帧 new_kf 对象的成员变量 kps_pixel_ 和 kps_point_local_，这样做是为了避免数据的复制，提高效率。
                     new_kf->kps_pixel_ = std::move(pixels);
                     new_kf->kps_point_local_ = std::move(pointsLocal);
                     new_kf->img_undist_ = imgRGB_undistorted;
@@ -486,6 +489,7 @@ void GaussianMapper::run()
             }
 
             // Prepare multi resolution images for training
+            // 采用多分辨率的image来进行训练
             for (auto& kfit : scene_->keyframes()) {
                 auto pkf = kfit.second;
                 if (device_type_ == torch::kCUDA) {
@@ -512,7 +516,7 @@ void GaussianMapper::run()
                 }
             }
 
-            // Prepare for training
+            // Prepare for training（进行训练的基本设置）
             {
                 std::unique_lock<std::mutex> lock_render(mutex_render_);
                 scene_->cameras_extent_ = std::get<1>(scene_->getNerfppNorm());
@@ -521,11 +525,11 @@ void GaussianMapper::run()
                 gaussians_->trainingSetup(opt_params_);
             }
 
-            // Invoke training once
+            // Invoke training once（训练1代）
             trainForOneIteration();
 
             // Finish initial mapping loop
-            initial_mapped_ = true;
+            initial_mapped_ = true;//执行了map的初始化并进行一次训练后就回跳出这个循环
             break;
         }
         else if (pSLAM_->isShutDown()) {
@@ -643,11 +647,12 @@ void GaussianMapper::trainColmap()
 }
 
 /**
- * @brief The training iteration body
+ * @brief The training iteration body（训练1代的流程）
  * 
  */
 void GaussianMapper::trainForOneIteration()
 {
+    //将训练的代数加1
     increaseIteration(1);
     auto iter_start_timing = std::chrono::steady_clock::now();
 
@@ -675,6 +680,7 @@ void GaussianMapper::trainForOneIteration()
         mask = undistort_mask_[viewpoint_cam->camera_id_];
     }
     else {
+        //获取图像的宽高、原图像、mask（用于去失真？？？）
         image_height = viewpoint_cam->gaus_pyramid_height_[training_level];
         image_width = viewpoint_cam->gaus_pyramid_width_[training_level];
         gt_image = viewpoint_cam->gaus_pyramid_original_image_[training_level].cuda();
@@ -685,6 +691,7 @@ void GaussianMapper::trainForOneIteration()
     std::unique_lock<std::mutex> lock_render(mutex_render_);
 
     // Every 1000 its we increase the levels of SH up to a maximum degree
+    // 根据当前的迭代次数来更新sh的系数
     if (getIteration() % 1000 == 0 && default_sh_ < model_params_.sh_degree_)
         default_sh_ += 1;
     // if (isdoingGausPyramidTraining())
@@ -692,7 +699,7 @@ void GaussianMapper::trainForOneIteration()
     // else
         gaussians_->setShDegree(default_sh_);
 
-    // Update learning rate
+    // Update learning rate（更新学习率）
     if (pSLAM_) {
         int used_times = kfs_used_times_[viewpoint_cam->fid_];
         int step = (used_times <= opt_params_.position_lr_max_steps_ ? used_times : opt_params_.position_lr_max_steps_);
@@ -708,7 +715,7 @@ void GaussianMapper::trainForOneIteration()
     gaussians_->setScalingLearningRate(scalingLearningRate());
     gaussians_->setRotationLearningRate(rotationLearningRate());
 
-    // Render
+    // Render（进行渲染）返回的render_pkg是一个元组，包含了渲染后的图像、视图空间的点、可见性过滤器、半径
     auto render_pkg = GaussianRenderer::render(
         viewpoint_cam,
         image_height,
@@ -718,15 +725,15 @@ void GaussianMapper::trainForOneIteration()
         background_,
         override_color_
     );
-    auto rendered_image = std::get<0>(render_pkg);
+    auto rendered_image = std::get<0>(render_pkg);//渲染后的图像
     auto viewspace_point_tensor = std::get<1>(render_pkg);
     auto visibility_filter = std::get<2>(render_pkg);
     auto radii = std::get<3>(render_pkg);
 
-    // Get rid of black edges caused by undistortion
+    // Get rid of black edges caused by undistortion（进行去失真？？？）
     torch::Tensor masked_image = rendered_image * mask;
 
-    // Loss
+    // Loss（计算loss并进行反向传播）
     auto Ll1 = loss_utils::l1_loss(masked_image, gt_image);
     float lambda_dssim = lambdaDssim();
     auto loss = (1.0 - lambda_dssim) * Ll1
@@ -736,14 +743,15 @@ void GaussianMapper::trainForOneIteration()
     torch::cuda::synchronize();
 
     {
-        torch::NoGradGuard no_grad;
+        torch::NoGradGuard no_grad;//关闭梯度计算
         ema_loss_for_log_ = 0.4f * loss.item().toFloat() + 0.6 * ema_loss_for_log_;
 
         if (keyframe_record_interval_ &&
             getIteration() % keyframe_record_interval_ == 0)
+            //把渲染后的图像、gt图像、关键帧id、结果保存的路径、结果保存的路径、结果保存的路径
             recordKeyframeRendered(masked_image, gt_image, viewpoint_cam->fid_, result_dir_, result_dir_, result_dir_);
 
-        // Densification
+        // Densification密集化处理
         if (getIteration() < opt_params_.densify_until_iter_) {
             // Keep track of max radii in image-space for pruning
             gaussians_->max_radii2D_.index_put_(
@@ -800,7 +808,7 @@ void GaussianMapper::trainForOneIteration()
         if (loop_closure_iteration_)
             loop_closure_iteration_ = false;
 
-        // Optimizer step
+        // Optimizer step（如果还是小于最大的迭代次数就继续执行优化）
         if (getIteration() < opt_params_.iterations_) {
             gaussians_->optimizer_->step();
             gaussians_->optimizer_->zero_grad(true);
