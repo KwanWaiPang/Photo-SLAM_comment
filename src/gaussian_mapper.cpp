@@ -897,13 +897,13 @@ void GaussianMapper::combineMappingOperations()
             }
 
             // Get new points
-            auto& associated_points = opr.associatedMapPoints();
+            auto& associated_points = opr.associatedMapPoints();//理论上是把对应上的点取除掉，就是新的点
             auto& points = std::get<0>(associated_points);
             auto& colors = std::get<1>(associated_points);
 
             // Add new points to the model
             if (initial_mapped_ && points.size() >= 30) {
-                torch::NoGradGuard no_grad;
+                torch::NoGradGuard no_grad;//接下来都关掉梯度计算
                 std::unique_lock<std::mutex> lock_render(mutex_render_);
                 gaussians_->increasePcd(points, colors, getIteration());
             }

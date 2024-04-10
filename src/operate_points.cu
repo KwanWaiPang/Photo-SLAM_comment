@@ -122,7 +122,7 @@ void scaleAndTransformThenMarkVisiblePoints(
     // 而final_mask就等于这三个mask的结合
     torch::Tensor final_mask = torch::logical_and(point_not_transformed_mask, point_unstable_mask);
     final_mask = torch::logical_and(final_mask, present);
-    num_transformed += final_mask.sum().item<int>();
+    num_transformed += final_mask.sum().item<int>();//计算 final_mask 张量中非零元素的数量，并将其转换为整数类型，然后加到变量 num_transformed 上。
     const int P = points.size(0);
 
     if (P != 0) {

@@ -290,6 +290,7 @@ void GaussianModel::increasePcd(std::vector<float> points, std::vector<float> co
 // auto time = std::chrono::duration_cast<std::chrono::milliseconds>(time2-time1).count();
 // std::cout << "increasePcd(umap) preparation time: " << time << " ms" <<std::endl;
 
+    //对于新添加的高斯点
     densificationPostfix(
         new_xyz,
         new_features_dc,
@@ -645,10 +646,10 @@ void GaussianModel::prunePoints(torch::Tensor& mask)
     // _prune_optimizer
     std::vector<torch::Tensor> optimizable_tensors(6);
     auto& param_groups = this->optimizer_->param_groups();
-    auto& state = this->optimizer_->state();
-    for (int group_idx = 0; group_idx < 6; ++group_idx) {
-        auto& param = param_groups[group_idx].params()[0];
-        auto key = c10::guts::to_string(param.unsafeGetTensorImpl());
+    auto& state = this->optimizer_->state();//获取优化器的状态
+    for (int group_idx = 0; group_idx < 6; ++group_idx) {//遍历对应的6个参数组
+        auto& param = param_groups[group_idx].params()[0];//获取对应参数组的参数
+        auto key = c10::guts::to_string(param.unsafeGetTensorImpl());//获取参数的键值
         if (state.find(key) != state.end()) {
             auto& stored_state = static_cast<torch::optim::AdamParamState&>(*state[key]);
             auto new_state = std::make_unique<torch::optim::AdamParamState>();
