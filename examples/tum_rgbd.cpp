@@ -129,7 +129,7 @@ int main(int argc, char **argv) //接受两个参数，一个是整数 argc，�
     }
 
     // Vector for tracking time statistics
-    std::vector<float> vTimesTrack;
+    std::vector<float> vTimesTrack;//用于存储跟踪时间的向量
     vTimesTrack.resize(nImages);
 
     std::cout << std::endl << "-------" << std::endl;

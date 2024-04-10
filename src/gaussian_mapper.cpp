@@ -468,6 +468,7 @@ void GaussianMapper::run()
                     catch (std::out_of_range) {
                         throw std::runtime_error("[GaussianMapper::run]KeyFrame Camera not found!");
                     }
+                    //计算变换矩阵（tensor格式）
                     new_kf->computeTransformTensors();
 
                     // 然后把关键帧添加到场景中
@@ -544,15 +545,15 @@ void GaussianMapper::run()
     // Second loop: Incremental gaussian mapping
     int SLAM_stop_iter = 0;
     while (!isStopped()) {
-        // Check conditions for incremental mapping
+        // Check conditions for incremental mapping（是否达到增量式mapping的条件）
         if (hasMetIncrementalMappingConditions()) {
-            combineMappingOperations();
+            combineMappingOperations();//如果达到了增量式mapping的条件，则进行mapping的操作
             if (cull_keyframes_)
-                cullKeyframes();
+                cullKeyframes();//清理场景中不需要的关键帧
         }
 
         // Invoke training once
-        trainForOneIteration();
+        trainForOneIteration();//继续执行训练直到达到最大的迭代次数
 
         if (pSLAM_->isShutDown()) {
             SLAM_stop_iter = getIteration();
@@ -656,7 +657,7 @@ void GaussianMapper::trainForOneIteration()
     increaseIteration(1);
     auto iter_start_timing = std::chrono::steady_clock::now();
 
-    // Pick a random Camera
+    // Pick a random Camera（随机获取一个关键帧）
     std::shared_ptr<GaussianKeyframe> viewpoint_cam = useOneRandomSlidingWindowKeyframe();
     if (!viewpoint_cam) {
         increaseIteration(-1);
@@ -1244,6 +1245,7 @@ GaussianMapper::useOneRandomKeyframe()
     return viewpoint_cam;
 }
 
+// 增加给定高斯关键帧 (pkf) 的使用次数。
 void GaussianMapper::increaseKeyframeTimesOfUse(
     std::shared_ptr<GaussianKeyframe> pkf,
     int times)
@@ -1251,20 +1253,28 @@ void GaussianMapper::increaseKeyframeTimesOfUse(
     pkf->remaining_times_of_use_ += times;
 }
 
+// 清理场景中不再需要的关键帧。
 void GaussianMapper::cullKeyframes()
 {
+    // 通过调用 pSLAM_ 对象的 getAtlas() 方法获取到当前关键帧的 ID 集合，这个集合被存储在一个无序集合 kfids 中。每个关键帧都有一个唯一的 ID 用于标识。
     std::unordered_set<unsigned long> kfids =
         pSLAM_->getAtlas()->GetCurrentKeyFrameIds();
+    // 定义了一个空的无序集合 kfids_to_erase，用于存储需要被删除的关键帧的 ID。
     std::vector<unsigned long> kfids_to_erase;
+    // 获取当前场景中关键帧的数量，并设置 kfids_to_erase 的容量为当前关键帧数量，以减少动态分配内存的次数。
     std::size_t nkfs = scene_->keyframes().size();
     kfids_to_erase.reserve(nkfs);
+
+    // 遍历当前场景中的关键帧。
     for (auto& kfit : scene_->keyframes()) {
         unsigned long kfid = kfit.first;
+        // 若当前关键帧的 ID 不在 kfids 集合中，说明当前关键帧不再被使用，需要删除。
         if (kfids.find(kfid) == kfids.end()) {
             kfids_to_erase.emplace_back(kfid);
         }
     }
 
+    // 删除对应的关键帧
     for (auto& kfid : kfids_to_erase) {
         scene_->keyframes().erase(kfid);
     }

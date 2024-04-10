@@ -82,7 +82,7 @@ public:
 public:
     std::size_t fid_;
     int creation_iter_;
-    int remaining_times_of_use_ = 0;
+    int remaining_times_of_use_ = 0;//当前关键帧可以使用的次数
 
     bool set_camera_ = false;
 
