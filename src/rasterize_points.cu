@@ -210,5 +210,5 @@ torch::Tensor markVisible(
 		present.contiguous().data_ptr<bool>());
   }
   
-  return present;
+  return present;//present是一个tensor就是用于标记是否可见的
 }

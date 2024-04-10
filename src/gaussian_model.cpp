@@ -57,6 +57,7 @@ torch::Tensor GaussianModel::getScalingActivation()
 
 torch::Tensor GaussianModel::getRotationActivation()
 {
+    // 调用 torch::nn::functional::normalize() 函数会对输入的旋转张量进行归一化处理，使其每一行（或列）的范数为1，从而得到旋转激活值。最终返回归一化后的张量作为函数的结果。
     return torch::nn::functional::normalize(this->rotation_);
 }
 
@@ -431,31 +432,35 @@ void GaussianModel::scaledTransformationPostfix(
 }
 
 void GaussianModel::scaledTransformVisiblePointsOfKeyframe(
-    torch::Tensor& point_not_transformed_flags,
-    torch::Tensor& diff_pose,
-    torch::Tensor& kf_world_view_transform,
-    torch::Tensor& kf_full_proj_transform,
-    const int kf_creation_iter,
+    torch::Tensor& point_not_transformed_flags,//这个点是否经过了变换
+    torch::Tensor& diff_pose,//标记了点的pose差
+    torch::Tensor& kf_world_view_transform,//关键帧world到视觉的变换
+    torch::Tensor& kf_full_proj_transform,//关键帧的projection
+    const int kf_creation_iter,//关键帧创建的代数
     const int stable_num_iter_existence,
     int& num_transformed,
     const float scale)
 {
-    torch::NoGradGuard no_grad;
+    torch::NoGradGuard no_grad;//在创建的范围内，禁用梯度计算
 
+    //获取当前所有的高斯点云
     torch::Tensor points = this->getXYZ();
     torch::Tensor rots = this->getRotationActivation();
     // torch::Tensor scales = this->scaling_;// * scale;
 
+    // 用于比较 exist_since_iter_ 和 kf_creation_iter 之间的差值的绝对值是否小于 stable_num_iter_existence。如果满足条件，则返回 true，否则返回 false。
+    // torch::where(condition, x, y)：这是 torch 中的函数，它根据条件 condition 选择在 x 和 y 之间的元素。如果条件为 true，则选择 x 中对应位置的元素，否则选择 y 中对应位置的元素。
     torch::Tensor point_unstable_flags = torch::where(
         torch::abs(this->exist_since_iter_ - kf_creation_iter) < stable_num_iter_existence,
         true,
         false);
 
+    //对点云进行缩放变换并标记可见的点
     scaleAndTransformThenMarkVisiblePoints(
-        points,
+        points,//当前所有的高斯点云
         rots,
         point_not_transformed_flags,
-        point_unstable_flags,
+        point_unstable_flags,//标记这个点是否稳定（如果存在太久了，认为是不稳定的）
         diff_pose,
         kf_world_view_transform,
         kf_full_proj_transform,
@@ -659,6 +664,7 @@ void GaussianModel::prunePoints(torch::Tensor& mask)
     this->max_radii2D_ = this->max_radii2D_.index({valid_points_mask});
 }
 
+//通过此函数来添加新的高斯点
 void GaussianModel::densificationPostfix(
     torch::Tensor& new_xyz,
     torch::Tensor& new_features_dc,

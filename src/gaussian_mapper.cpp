@@ -549,7 +549,7 @@ void GaussianMapper::run()
     while (!isStopped()) {
         // Check conditions for incremental mapping（是否达到增量式mapping的条件）
         if (hasMetIncrementalMappingConditions()) {
-            combineMappingOperations();//如果达到了增量式mapping的条件，则进行mapping的操作
+            combineMappingOperations();//如果达到了增量式mapping的条件，则进行mapping的操作，同时给高斯中添加新的高斯点
             if (cull_keyframes_)
                 cullKeyframes();//清理场景中不需要的关键帧
         }
@@ -767,7 +767,7 @@ void GaussianMapper::trainForOneIteration()
             if ((getIteration() > opt_params_.densify_from_iter_) &&
                 (getIteration() % densifyInterval()== 0)) {
                 int size_threshold = (getIteration() > prune_big_point_after_iter_) ? 20 : 0;
-                gaussians_->densifyAndPrune(
+                gaussians_->densifyAndPrune(//密集化与剪枝
                     densifyGradThreshold(),
                     densify_min_opacity_,//0.005,//
                     scene_->cameras_extent_,
