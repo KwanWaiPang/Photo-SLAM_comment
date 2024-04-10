@@ -273,7 +273,7 @@ protected:
     int default_sh_ = 0;
 
     // Settings
-    SystemSensorType sensor_type_;
+    SystemSensorType sensor_type_;//传感器的类型
 
     float monocular_inactive_geo_densify_max_pixel_dist_ = 20.0;
     float stereo_baseline_length_ = 0.0f;

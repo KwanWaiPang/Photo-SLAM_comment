@@ -80,13 +80,13 @@ GaussianMapper::GaussianMapper(
     gaussians_ = std::make_shared<GaussianModel>(model_params_);//初始化了sh系数，同时初始化了3DGS对应的张量
     scene_ = std::make_shared<GaussianScene>(model_params_);
 
-    // Mode
+    // Mode（如果没有slam的结果则返回）
     if (!pSLAM) {
         // NO SLAM
         return;
     }
 
-    // Sensors
+    // Sensors（下面确定下传感器的类型）
     switch (pSLAM->getSensorType())
     {
     case ORB_SLAM3::System::MONOCULAR:
@@ -124,15 +124,22 @@ GaussianMapper::GaussianMapper(
     // TODO: not only monocular
     auto settings = pSLAM->getSettings();
     cv::Size SLAM_im_size = settings->newImSize();
+
+    //获取相机的非失真的参数
     UndistortParams undistort_params(
         SLAM_im_size,
         settings->camera1DistortionCoef()
     );
 
+    //获取所有的相机，然后获取对应的相机内参
     auto vpCameras = pSLAM->getAtlas()->GetAllCameras();
     for (auto& SLAM_camera : vpCameras) {
-        Camera camera;
+        Camera camera;//创建一个相机类
+
+        //获取相机的id
         camera.camera_id_ = SLAM_camera->GetId();
+
+        //根据相机的类型获取相机的内参矩阵
         if (SLAM_camera->GetType() == ORB_SLAM3::GeometricCamera::CAM_PINHOLE) {
             camera.setModelId(Camera::CameraModelType::PINHOLE);
             float SLAM_fx = SLAM_camera->getParameter(0);
@@ -233,7 +240,7 @@ GaussianMapper::GaussianMapper(
             viewer_camera_id_ = camera.camera_id_;
             viewer_camera_id_set_ = true;
         }
-        this->scene_->addCamera(camera);
+        this->scene_->addCamera(camera);//最后放到scene_中
     }
 }
 
