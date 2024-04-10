@@ -136,13 +136,15 @@ int main(int argc, char **argv) //接受两个参数，一个是整数 argc，�
     std::cout << "Start processing sequence ..." << std::endl;
     std::cout << "Images in the sequence: " << nImages << std::endl << std::endl;
 
-    // Main loop
+    // Main loop（这是执行orbslam3的loop）
     cv::Mat imRGB, imD;
     for (int ni = 0; ni < nImages; ni++)
     {
+        //检查orbslam3是否已经关闭，若已关闭则跳出循环
         if (pSLAM->isShutDown())
             break;
-        // Read image and depthmap from file
+
+        // Read image and depthmap from file（从文件中获取图像以及深度图）
         imRGB = cv::imread(std::string(argv[4]) + "/" + vstrImageFilenamesRGB[ni], cv::IMREAD_UNCHANGED);
         cv::cvtColor(imRGB, imRGB, CV_BGR2RGB);
         imD = cv::imread(std::string(argv[4]) + "/" + vstrImageFilenamesD[ni], cv::IMREAD_UNCHANGED);
@@ -171,7 +173,7 @@ int main(int argc, char **argv) //接受两个参数，一个是整数 argc，�
 
         std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
 
-        // Pass the image to the SLAM system
+        // Pass the image to the SLAM system（进行跟踪以及获取稀疏点云）
         pSLAM->TrackRGBD(imRGB, imD, tframe, std::vector<ORB_SLAM3::IMU::Point>(), vstrImageFilenamesRGB[ni]);
 
         std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
