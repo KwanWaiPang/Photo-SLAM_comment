@@ -72,7 +72,7 @@ public:
 
     std::map<camera_id_t, Camera> cameras_;
     std::map<std::size_t, std::shared_ptr<GaussianKeyframe>> keyframes_;
-    std::map<point3D_id_t, Point3D> cached_point_cloud_;
+    std::map<point3D_id_t, Point3D> cached_point_cloud_;//场景中缓存的彩色点云及其id
 
 protected:
     std::mutex mutex_kfs_;

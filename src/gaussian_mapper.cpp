@@ -389,20 +389,24 @@ void GaussianMapper::readConfigFromFile(std::filesystem::path cfg_path)
 // tum_rgbd中开启的线程，运行3D高斯的过程
 void GaussianMapper::run()
 {
-    // First loop: Initial gaussian mapping
+    // First loop: Initial gaussian mapping（首先通过一个循环来初始化高斯建图过程）
     while (!isStopped()) {
         // Check conditions for initial mapping
-        if (hasMetInitialMappingConditions()) {
+        if (hasMetInitialMappingConditions()) {//检查是否满足了初始化建图的条件（要求orbslam没关闭不为空且关键帧大于一定的数目）
+
+            //清除orbslam3的map
             pSLAM_->getAtlas()->clearMappingOperation();
 
-            // Get initial sparse map
-            auto pMap = pSLAM_->getAtlas()->GetCurrentMap();
+            // Get initial sparse map（获取初始化的稀疏地图）
+            auto pMap = pSLAM_->getAtlas()->GetCurrentMap();//获取orbslam中的当前的地图
             std::vector<ORB_SLAM3::KeyFrame*> vpKFs;
             std::vector<ORB_SLAM3::MapPoint*> vpMPs;
             {
                 std::unique_lock<std::mutex> lock_map(pMap->mMutexMapUpdate);
-                vpKFs = pMap->GetAllKeyFrames();
-                vpMPs = pMap->GetAllMapPoints();
+                vpKFs = pMap->GetAllKeyFrames();//获取关键帧
+                vpMPs = pMap->GetAllMapPoints();//获取地图点
+
+                //遍历所有的地图点，并获取其对应的3D位置以及颜色，然后放入scene_中
                 for (const auto& pMP : vpMPs){
                     Point3D point3D;
                     auto pos = pMP->GetWorldPos();
@@ -413,6 +417,8 @@ void GaussianMapper::run()
                     point3D.color_(0) = color(0);
                     point3D.color_(1) = color(1);
                     point3D.color_(2) = color(2);
+
+                    //将点及队医你个的颜色放入到scene_中
                     scene_->cachePoint3D(pMP->mnId, point3D);
                 }
                 for (const auto& pKF : vpKFs){
@@ -792,10 +798,15 @@ void GaussianMapper::trainForOneIteration()
     }
 }
 
+// 返回 GaussianMapper 类对象的私有成员变量 stopped_ 的值，同时通过互斥锁确保在多线程环境中对该变量的访问是线程安全的。
 bool GaussianMapper::isStopped()
 {
+    // 创建了一个独占锁 lock_status，并锁定了名为 mutex_status_ 的互斥量。独占锁的作用是确保在函数执行期间其他线程无法同时访问被保护的数据。
     std::unique_lock<std::mutex> lock_status(this->mutex_status_);
+    // 这一行返回 GaussianMapper 类对象的私有成员变量 stopped_ 的值。由于此时已经获得了互斥锁 mutex_status_ 的独占访问权，因此可以安全地读取该成员变量的值。
     return this->stopped_;
+
+    // 当函数执行完毕并退出作用域时，独占锁 lock_status 会自动释放，解锁互斥量 mutex_status_。
 }
 
 void GaussianMapper::signalStop(const bool going_to_stop)
