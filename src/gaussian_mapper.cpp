@@ -38,11 +38,13 @@ GaussianMapper::GaussianMapper(
       large_trans_th_(1e-2f),
       training_report_interval_(0)
 {
-    // Random seed（随机数生成器的种子设置）
-    std::srand(seed);
-    torch::manual_seed(seed);
+    // Random seed（随机数生成器的种子设置。设置随机数生成器的种子为 seed，以便使得随机数生成的结果可预测和可重现。）
+    // 种子的设置是为了使得每次随机数生成的结果可重现，即相同种子下的随机数生成结果相同。
+    // 这在很多情况下是非常有用的，例如调试程序、验证模型等。通常情况下，可以将种子设置为某个固定的值，比如 0，以确保结果的一致性。
+    std::srand(seed);//在 C++ 标准库中，此代码用于设置 C 标准库中的随机数生成器的种子
+    torch::manual_seed(seed);//用于设置 PyTorch/litorch 库中的随机数生成器的种子。
 
-    // Device
+    // Device（根据输入的设备型号进行设置）
     if (device_type == torch::kCUDA && torch::cuda::is_available()) {
         std::cout << "[Gaussian Mapper]CUDA available! Training on GPU." << std::endl;
         device_type_ = torch::kCUDA;
@@ -54,23 +56,28 @@ GaussianMapper::GaussianMapper(
         model_params_.data_device_ = "cpu";
     }
 
+    // 创建结果的输出目录
     result_dir_ = result_dir;
     CHECK_DIRECTORY_AND_CREATE_IF_NOT_EXISTS(result_dir)
+
+    // 读取配置文件
     config_file_path_ = gaussian_config_file_path;
     readConfigFromFile(gaussian_config_file_path);
 
+    // 设置背景的颜色
     std::vector<float> bg_color;
-    if (model_params_.white_background_)
+    if (model_params_.white_background_)//如果是白色背景
         bg_color = {1.0f, 1.0f, 1.0f};
-    else
+    else //否则就是黑色背景
         bg_color = {0.0f, 0.0f, 0.0f};
+    //  bg_color 转换为一个张量，并将其存储在名为 background_ 的变量中。在这里，使用了 torch::TensorOptions() 来指定张量的选项，包括数据类型为 torch::kFloat32（即32位浮点数）以及设备类型
     background_ = torch::tensor(bg_color,
                     torch::TensorOptions().dtype(torch::kFloat32).device(device_type_));
     
     override_color_ = torch::empty(0, torch::TensorOptions().device(device_type_));
 
-    // Initialize scene and model
-    gaussians_ = std::make_shared<GaussianModel>(model_params_);
+    // Initialize scene and model（初始化模型与场景）
+    gaussians_ = std::make_shared<GaussianModel>(model_params_);//初始化了sh系数，同时初始化了3DGS对应的张量
     scene_ = std::make_shared<GaussianScene>(model_params_);
 
     // Mode
@@ -230,6 +237,9 @@ GaussianMapper::GaussianMapper(
     }
 }
 
+/*
+    * @brief 读取一系列的配置文件    
+*/
 void GaussianMapper::readConfigFromFile(std::filesystem::path cfg_path)
 {
     cv::FileStorage settings_file(cfg_path.string().c_str(), cv::FileStorage::READ);

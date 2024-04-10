@@ -108,7 +108,7 @@ int main(int argc, char **argv) //接受两个参数，一个是整数 argc，�
     std::shared_ptr<ORB_SLAM3::System> pSLAM = //用C++中的智能指针 std::shared_ptr 创建了一个指向 ORB_SLAM3::System 类型对象的共享指针 pSLAM
         std::make_shared<ORB_SLAM3::System>(
             argv[1], argv[2], ORB_SLAM3::System::RGBD);//输入参数为词典文件路径、设置文件路径和传感器类型（RGBD=2也就是传感器的类型）
-    float imageScale = pSLAM->GetImageScale();//获取图像的缩放比例（也可能是尺度信息，TODO：此处需要深入查看orbslam3部分的源码）
+    float imageScale = pSLAM->GetImageScale();//获取图像的缩放比例（也可能是尺度信息，gwp_TODO：此处需要深入查看orbslam3部分的源码）
 
     // Create GaussianMapper（创建3DGS）
     std::filesystem::path gaussian_cfg_path(argv[3]);//argv[3]表示3DGS的设置文件路径

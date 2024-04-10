@@ -26,7 +26,9 @@ GaussianModel::GaussianModel(const int sh_degree)
         this->device_type_ = torch::kCUDA;
     else
         this->device_type_ = torch::kCPU;
-
+    
+    //初始化3D高斯对应的张量，包括xyz_、features_dc_、features_rest_、scaling_、rotation_、opacity_、max_radii2D_、xyz_gradient_accum_、denom_
+    // 初始化的时候都是初始化为空的
     GAUSSIAN_MODEL_INIT_TENSORS(this->device_type_)
 }
 
