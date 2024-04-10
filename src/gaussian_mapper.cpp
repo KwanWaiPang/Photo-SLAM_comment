@@ -420,7 +420,7 @@ void GaussianMapper::run()
                     point3D.color_(2) = color(2);
 
                     //将点及队医你个的颜色放入到scene_中
-                    scene_->cachePoint3D(pMP->mnId, point3D);
+                    scene_->cachePoint3D(pMP->mnId, point3D);//放入cached_point_cloud_中
                 }
 
                 //然后再遍历关键帧
@@ -520,10 +520,12 @@ void GaussianMapper::run()
             // Prepare for training（进行训练的基本设置）
             {
                 std::unique_lock<std::mutex> lock_render(mutex_render_);
+                // 从点云中获取场景的边界
                 scene_->cameras_extent_ = std::get<1>(scene_->getNerfppNorm());
+                //根据当前缓存的点云以及场景的边界来创建高斯模型（cached_point_cloud_为缓存的彩色点云）
                 gaussians_->createFromPcd(scene_->cached_point_cloud_, scene_->cameras_extent_);
                 std::unique_lock<std::mutex> lock(mutex_settings_);
-                gaussians_->trainingSetup(opt_params_);
+                gaussians_->trainingSetup(opt_params_);//进行最基本的训练设置
             }
 
             // Invoke training once（训练1代）

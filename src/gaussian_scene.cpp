@@ -149,5 +149,5 @@ GaussianScene::getNerfppNorm()
 
     Eigen::Vector3f translate = -avg_cam_center;
 
-    return std::make_tuple(translate, radius);
+    return std::make_tuple(translate, radius);//返回一个元组包含场景的边界
 }

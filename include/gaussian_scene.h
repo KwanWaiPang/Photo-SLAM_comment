@@ -66,7 +66,7 @@ public:
         splitTrainAndTestKeyframes(const float test_ratio);
 
 public:
-    float cameras_extent_; ///< scene_info.nerf_normalization["radius"]
+    float cameras_extent_; ///< scene_info.nerf_normalization["radius"]（获取场景的边界）
 
     int loaded_iter_;
 
